@@ -182,19 +182,33 @@ class DrawingEditor:
         if filename:
             with open(filename, "w") as file:
                 file.write("Save your drawing data here")
-
     def export(self):
         root = ET.Element("Shapes")
-        for shape in self.shapes:
-            shape_element = ET.SubElement(root, shape['type'])
-            for key, value in shape.items():
-                if key != 'type':
-                    shape_element.set(key, str(value))
+        for group in self.shapes:
+            for shape in group:
+                shape_type = shape[0]  # This is the draw mode indicating 'line' or 'rectangle'
+                props = shape[1]
+                # Create an XML element for each shape based on its type
+                shape_element = ET.SubElement(root, shape_type)
+                # Add details as sub-elements or attributes
+                ET.SubElement(shape_element, 'StartX').text = str(props['start_x'])
+                ET.SubElement(shape_element, 'StartY').text = str(props['start_y'])
+                ET.SubElement(shape_element, 'EndX').text = str(props['end_x'])
+                ET.SubElement(shape_element, 'EndY').text = str(props['end_y'])
+                # Assume 'color' is always defined; if not, you'll need to set a default or check if it exists
+                ET.SubElement(shape_element, 'Color').text = props.get('color', 'black')  
+                if shape_type == 'rectangle':
+                    # Only rectangles might have 'corner_style'
+                    corner_style = props.get('corner_style', 'square')  # Default to 'square' if not present
+                    ET.SubElement(shape_element, 'CornerStyle').text = corner_style
         tree = ET.ElementTree(root)
         filename = filedialog.asksaveasfilename(defaultextension=".xml", filetypes=[("XML Files", "*.xml")])
         if filename:
             tree.write(filename)
         messagebox.showinfo("Export", "Drawing exported to XML successfully!")
+
+
+
 
 root = tk.Tk()
 app = DrawingEditor(root)
