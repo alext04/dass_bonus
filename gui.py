@@ -1,5 +1,3 @@
-
-
 import tkinter as tk
 from tkinter import messagebox, filedialog
 import xml.etree.ElementTree as ET
@@ -14,7 +12,7 @@ class DrawingEditor:
         self.start_y = None
         self.draw_mode = "line"
         self.shapes = []
-        self.selected_items = []  # Keep track of selected items
+        self.selected_items = []
 
         self.toolbar = tk.Frame(root)
         self.toolbar.pack(side=tk.TOP, fill=tk.X)
@@ -33,6 +31,9 @@ class DrawingEditor:
 
         self.export_button = tk.Button(self.toolbar, text="Export", command=self.export)
         self.export_button.pack(side=tk.LEFT)
+
+        self.delete_button = tk.Button(self.toolbar, text="Delete", command=self.delete_selected)
+        self.delete_button.pack(side=tk.LEFT)
 
         self.menu = tk.Menu(root)
         self.menu.add_command(label="Save", command=self.save)
@@ -65,13 +66,14 @@ class DrawingEditor:
 
     def stop_drawing(self, event):
         self.canvas.delete("temp_shape")
+        item_id = self.canvas.create_line(self.start_x, self.start_y, event.x, event.y, fill="black") if self.draw_mode == "line" else self.canvas.create_rectangle(self.start_x, self.start_y, event.x, event.y, outline="black")
         shape_details = {
             'type': self.draw_mode,
             'start_x': self.start_x,
             'start_y': self.start_y,
             'end_x': event.x,
             'end_y': event.y,
-            'item_id': self.canvas.create_line(self.start_x, self.start_y, event.x, event.y, fill="black") if self.draw_mode == "line" else self.canvas.create_rectangle(self.start_x, self.start_y, event.x, event.y, outline="black")
+            'item_id': item_id
         }
         self.shapes.append(shape_details)
 
@@ -90,29 +92,27 @@ class DrawingEditor:
         self.select_shapes(selection_rect)
 
     def select_shapes(self, rect):
-        # Clear previous selection highlights if needed
         for item in self.selected_items:
             item_type = self.canvas.type(item)
             if item_type == 'line':
-                self.canvas.itemconfig(item, fill="black", width=1)  # Reset line to default appearance
+                self.canvas.itemconfig(item, fill="black", width=1)
             else:
-                self.canvas.itemconfig(item, outline="black", width=1)  # Reset rectangle to default appearance
-
-        # Clear the list of previously selected items
+                self.canvas.itemconfig(item, outline="black", width=1)
         self.selected_items.clear()
-
-        # Find all items that overlap the selection rectangle
         selected_items = self.canvas.find_overlapping(rect[0], rect[1], rect[2], rect[3])
-
-        # Highlight the new selected items
         for item in selected_items:
             item_type = self.canvas.type(item)
             if item_type == 'line':
-                self.canvas.itemconfig(item, fill="red", width=2)  # Highlight selected lines
+                self.canvas.itemconfig(item, fill="red", width=2)
             else:
-                self.canvas.itemconfig(item, outline="red", width=2)  # Highlight selected rectangles
-            self.selected_items.append(item)  # Add to the list of selected items
+                self.canvas.itemconfig(item, outline="red", width=2)
+            self.selected_items.append(item)
 
+    def delete_selected(self):
+        for item in self.selected_items:
+            self.canvas.delete(item)
+        self.shapes = [shape for shape in self.shapes if shape['item_id'] not in self.selected_items]
+        self.selected_items.clear()
 
     def save(self):
         filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")])
