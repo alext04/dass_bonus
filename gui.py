@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import messagebox, filedialog
 import xml.etree.ElementTree as ET
@@ -9,8 +8,8 @@ class DrawingEditor:
         self.canvas = tk.Canvas(root, width=800, height=600, bg='white')
         self.canvas.pack()
 
-        self.start_x = None
-        self.start_y = None
+        self.begin_x = None
+        self.begin_y = None
         self.draw_mode = "line"
         self.shapes = []
         self.selected_items = []
@@ -29,20 +28,29 @@ class DrawingEditor:
 
         self.move_button = tk.Button(self.toolbar, text="Move", command=lambda: self.switch_mode("move"))
         self.move_button.pack(side=tk.LEFT)
-
-        self.save_button = tk.Button(self.toolbar, text="Save", command=self.save)
-        self.save_button.pack(side=tk.LEFT)
-
-        self.export_button = tk.Button(self.toolbar, text="Export", command=self.export)
-        self.export_button.pack(side=tk.LEFT)
-
+        
+        self.group_button = tk.Button(self.toolbar, text="Group", command=self.group_selected)
+        self.group_button.pack(side=tk.LEFT)
+        
+        self.ungroup_button = tk.Button(self.toolbar, text="Ungroup", command=self.ungroup_selected)
+        self.ungroup_button.pack(side=tk.LEFT)
+        
         self.delete_button = tk.Button(self.toolbar, text="Delete", command=self.delete_selected)
         self.delete_button.pack(side=tk.LEFT)
 
-        self.menu = tk.Menu(root)
-        self.menu.add_command(label="Save", command=self.save)
-        self.menu.add_command(label="Export", command=self.export)
-        self.root.config(menu=self.menu)
+        self.export_button = tk.Button(self.toolbar, text="Export", command=self.export)
+        self.export_button.pack(side=tk.RIGHT)
+        
+        # self.open_button = tk.Button(self.toolbar, text="Open", command=self.open)
+        # self.open_button.pack(side=tk.RIGHT)
+        
+        self.save_button = tk.Button(self.toolbar, text="Save", command=self.save)
+        self.save_button.pack(side=tk.RIGHT)
+
+        # self.menu = tk.Menu(root)
+        # self.menu.add_command(label="Save", command=self.save)
+        # self.menu.add_command(label="Export", command=self.export)
+        # self.root.config(menu=self.menu)
 
     def switch_mode(self, mode):
         self.draw_mode = mode
@@ -63,39 +71,38 @@ class DrawingEditor:
             self.canvas.bind("<ButtonRelease-1>", self.stop_drawing)
 
     def start_drawing(self, event):
-        self.start_x = event.x
-        self.start_y = event.y
+        self.begin_x = event.x
+        self.begin_y = event.y
 
     def draw(self, event):
         self.canvas.delete("temp_shape")
         if self.draw_mode == "rectangle":
-            self.canvas.create_rectangle(self.start_x, self.start_y, event.x, event.y, outline="black", tags="temp_shape")
+            self.canvas.create_rectangle(self.begin_x, self.begin_y, event.x, event.y, outline="black", tags="temp_shape")
         elif self.draw_mode == "line":
-            self.canvas.create_line(self.start_x, self.start_y, event.x, event.y, fill="black", tags="temp_shape")
+            self.canvas.create_line(self.begin_x, self.begin_y, event.x, event.y, fill="black", tags="temp_shape")
 
     def stop_drawing(self, event):
         self.canvas.delete("temp_shape")
         shape_details = (
             self.draw_mode,
-            {'start_x': self.start_x, 'start_y': self.start_y, 'end_x': event.x, 'end_y': event.y},
-            self.canvas.create_line(self.start_x, self.start_y, event.x, event.y, fill="black") if self.draw_mode == "line" else self.canvas.create_rectangle(self.start_x, self.start_y, event.x, event.y, outline="black")
+            {'begin_x': self.begin_x, 'begin_y': self.begin_y, 'end_x': event.x, 'end_y': event.y},
+            self.canvas.create_line(self.begin_x, self.begin_y, event.x, event.y, fill="black") if self.draw_mode == "line" else self.canvas.create_rectangle(self.begin_x, self.begin_y, event.x, event.y, outline="black")
         )
         # Add new shape to a new group
         self.shapes.append([shape_details])
 
-
     def start_selection(self, event):
-        self.start_x = event.x
-        self.start_y = event.y
+        self.begin_x = event.x
+        self.begin_y = event.y
         self.canvas.delete("selection")
 
     def draw_selection(self, event):
         self.canvas.delete("selection")
-        self.canvas.create_rectangle(self.start_x, self.start_y, event.x, event.y, outline="blue", tags="selection")
+        self.canvas.create_rectangle(self.begin_x, self.begin_y, event.x, event.y, outline="blue", tags="selection")
 
     def end_selection(self, event):
         self.canvas.delete("selection")
-        selection_rect = (self.start_x, self.start_y, event.x, event.y)
+        selection_rect = (self.begin_x, self.begin_y, event.x, event.y)
         self.select_shapes(selection_rect)
 
     def select_shapes(self, rect):
@@ -119,12 +126,18 @@ class DrawingEditor:
                         self.canvas.itemconfig(item_id, outline="red", width=2)
                     if group not in self.selected_items:
                         self.selected_items.append(group)
+                        # Color all objects within the group when selected
+                        for shape_in_group in group:
+                            item_id_in_group = shape_in_group[2]
+                            if self.canvas.type(item_id_in_group) == 'line':
+                                self.canvas.itemconfig(item_id_in_group, fill="red", width=2)
+                            else:
+                                self.canvas.itemconfig(item_id_in_group, outline="red", width=2)
                     break
 
-
     def start_move(self, event):
-        self.start_x = event.x
-        self.start_y = event.y
+        self.begin_x = event.x
+        self.begin_y = event.y
 
     def stop_move(self, event):
         # Unbind motion and button release events
@@ -142,20 +155,16 @@ class DrawingEditor:
 
         # Clear the list of selected items
         self.selected_items.clear()
-
-        
-        
         
     def move(self, event):
-        dx = event.x - self.start_x
-        dy = event.y - self.start_y
+        dx = event.x - self.begin_x
+        dy = event.y - self.begin_y
         for group in self.selected_items:
             for shape in group:
                 self.canvas.move(shape[2], dx, dy)
-        self.start_x = event.x
-        self.start_y = event.y
+        self.begin_x = event.x
+        self.begin_y = event.y
         
-
     def delete_selected(self):
         for group in self.selected_items:
             for shape in group:
@@ -163,19 +172,24 @@ class DrawingEditor:
         self.shapes = [group for group in self.shapes if group not in self.selected_items]
         self.selected_items.clear()
         
-        
     def group_selected(self):
         if len(self.selected_items) > 1:
             new_group = []
             for group in self.selected_items:
-                new_group.extend(group)
-                self.shapes.remove(group)
+                for shape in group:
+                    new_group.append(shape)
+                    self.shapes.remove(group)
             self.shapes.append(new_group)
-            # Update visuals for grouped items
-            for shape in new_group:
-                self.canvas.itemconfig(shape[2], outline="green", width=2)
+            self.selected_items.clear()
+        else:
+            messagebox.showwarning("Group", "Select multiple items to group!")
+            
+    def ungroup_selected(self):
+        for group in self.selected_items:
+            for shape in group:
+                self.shapes.append([shape])
+        self.shapes.remove(group)
         self.selected_items.clear()
-
 
     def save(self):
         filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")])
@@ -186,13 +200,13 @@ class DrawingEditor:
         root = ET.Element("Shapes")
         for group in self.shapes:
             for shape in group:
-                shape_type = shape[0]  # This is the draw mode indicating 'line' or 'rectangle'
+                shape_type = shape[0]  # 'line' or 'rectangle'
                 props = shape[1]
                 # Create an XML element for each shape based on its type
                 shape_element = ET.SubElement(root, shape_type)
                 # Add details as sub-elements or attributes
-                ET.SubElement(shape_element, 'StartX').text = str(props['start_x'])
-                ET.SubElement(shape_element, 'StartY').text = str(props['start_y'])
+                ET.SubElement(shape_element, 'StartX').text = str(props['begin_x'])
+                ET.SubElement(shape_element, 'StartY').text = str(props['begin_y'])
                 ET.SubElement(shape_element, 'EndX').text = str(props['end_x'])
                 ET.SubElement(shape_element, 'EndY').text = str(props['end_y'])
                 # Assume 'color' is always defined; if not, you'll need to set a default or check if it exists
@@ -206,9 +220,6 @@ class DrawingEditor:
         if filename:
             tree.write(filename)
         messagebox.showinfo("Export", "Drawing exported to XML successfully!")
-
-
-
 
 root = tk.Tk()
 app = DrawingEditor(root)
