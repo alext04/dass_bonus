@@ -194,15 +194,22 @@ class DrawingEditor:
         filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")])
         if filename:
             with open(filename, "w") as file:
-                file.write("Save your drawing data here")
+                file.write("Save your drawing data here") # Needs to be updated with ASCII text format of the drawing
+
     def export(self):
         root = ET.Element("Shapes")
         for group in self.shapes:
+            if len(group) > 1:
+                group_element = ET.SubElement(root, "Group")  # Create a group element for each group
+                
             for shape in group:
                 shape_type = shape[0]  # 'line' or 'rectangle'
                 props = shape[1]
                 # Create an XML element for each shape based on its type
-                shape_element = ET.SubElement(root, shape_type)
+                if len(group) == 1:
+                    shape_element = ET.SubElement(root, shape_type)  # Add shape element as a child of the root element
+                else:
+                    shape_element = ET.SubElement(group_element, shape_type)  # Add shape element as a child of the group element
                 # Add details as sub-elements or attributes
                 ET.SubElement(shape_element, 'StartX').text = str(props['begin_x'])
                 ET.SubElement(shape_element, 'StartY').text = str(props['begin_y'])
@@ -214,11 +221,16 @@ class DrawingEditor:
                     # Only rectangles might have 'corner_style'
                     corner_style = props.get('corner_style', 'square')  # Default to 'square' if not present
                     ET.SubElement(shape_element, 'CornerStyle').text = corner_style
+        
         tree = ET.ElementTree(root)
+        ET.indent(tree, space="\t", level=0)
         filename = filedialog.asksaveasfilename(defaultextension=".xml", filetypes=[("XML Files", "*.xml")])
         if filename:
-            tree.write(filename)
-        messagebox.showinfo("Export", "Drawing exported to XML successfully!")
+            try:
+                tree.write(filename, encoding="utf-8")
+                messagebox.showinfo("Export", "Drawing exported to XML successfully!")
+            except Exception as e:
+                messagebox.showerror("Export Error", str(e))
 
 root = tk.Tk()
 app = DrawingEditor(root)
