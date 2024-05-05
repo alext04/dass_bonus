@@ -178,7 +178,6 @@ class DrawingEditor:
             for group in self.selected_items:
                 for shape in group:
                     new_group.append(shape)
-                    self.shapes.remove(group)
             self.shapes.append(new_group)
             self.selected_items.clear()
         else:
