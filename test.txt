@@ -1,8 +1,8 @@
-rectangle 260 235 446 410
-rectangle 206 242 432 137
-rectangle 582 393 726 507
-line 575 460 732 344
+rect 260 235 446 410 b s
+rect 206 242 432 137 k s
+rect 582 393 726 507 r s
+line 575 460 732 344 b 
 start
-rectangle 582 393 726 507
-line 575 460 732 344
+rect 582 393 726 507 b s
+line 575 460 732 344 b
 end
