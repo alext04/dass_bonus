@@ -190,11 +190,26 @@ class DrawingEditor:
         self.shapes.remove(group)
         self.selected_items.clear()
 
+    # def save(self):
+    #     filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")])
+    #     if filename:
+    #         with open(filename, "w") as file:
+    #             file.write("Save your drawing data here") # Needs to be updated with ASCII text format of the drawing
+
     def save(self):
         filename = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")])
         if filename:
             with open(filename, "w") as file:
-                file.write("Save your drawing data here") # Needs to be updated with ASCII text format of the drawing
+                for group in self.shapes:
+                    if len(group) > 1:
+                        file.write("start\n")
+                    for shape in group:
+                        print(shape)
+                        file.write((" ").join([shape[0], str(shape[1]['begin_x']), str(shape[1]['begin_y']), str(shape[1]['end_x']), str(shape[1]['end_y'])]))
+                        file.write("\n")
+                    if len(group) > 1:
+                        file.write("end\n")
+                messagebox.showinfo("Save", "Drawing saved successfully!")
 
     def export(self):
         root = ET.Element("Shapes")
