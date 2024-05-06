@@ -174,20 +174,21 @@ class DrawingEditor:
             
             for shape in group:
                 item_id = shape[2]
-                item_type = self.canvas.type(item_id)
                 if item_id in selected_items:
-                    groups.append(group)
-                    
-                    # Highlight outline in red and increase width to 2
-                    if item_type == 'line':
-                        self.canvas.itemconfig(item_id, fill='red')
-                    else:
-                        self.canvas.itemconfig(item_id, outline='red', width=2)
-                        
+                    groups.append(group)                     
                     break  
 
         self.selected_items.clear()
         self.selected_items = groups
+        
+        for group in self.selected_items:
+            for shape in group:
+                item_id = shape[2]
+                item_type = self.canvas.type(item_id)                   
+                if item_type == 'line':
+                        self.canvas.itemconfig(item_id, fill='red')
+                else:
+                        self.canvas.itemconfig(item_id, outline='red', width=2)
         # print (self.selected_items)
 
     def polygon_overlaps(self, polygon_id, selection_rect):
@@ -250,6 +251,7 @@ class DrawingEditor:
                     
             self.shapes.append(new_group)
             self.selected_items.clear()
+            self.selected_items.append(new_group)
         else:
             messagebox.showwarning("Group", "Select multiple items to group!")
             
