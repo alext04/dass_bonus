@@ -314,7 +314,10 @@ class DrawingEditor:
                     'color': color_data(shape_data[5]),
                 }
                 if(shape_type == 'rect'):
-                    shape_properties['style']=shape_data[6]
+                    if shape_data[6] == 's':
+                        shape_properties['style']='square'
+                    if shape_data[6] == 'r':
+                        shape_properties['style']='rounded'
                 
                 current_group.append((shape_type, shape_properties))
             
@@ -323,7 +326,14 @@ class DrawingEditor:
             self.shapes.append(current_group)
 
         print(self.shapes)
-    
+        if self.draw_mode == "rectangle":
+            color = self.shapes[0][0][1]['color'] if self.selected_items and 'color' in self.selected_items[0][0][1] else 'black'
+            self.canvas.create_rectangle(self.begin_x, self.begin_y, event.x, event.y, outline=color, tags="temp_shape")
+        elif self.draw_mode == "line":
+            color = self.selected_items[0][0][1]['color'] if self.selected_items and 'color' in self.selected_items[0][0][1] else 'black'
+            self.canvas.create_line(self.begin_x, self.begin_y, event.x, event.y, fill=color, tags="temp_shape")
+
+        draw_shapes(self.canvas, self.shapes)
    
     
     def edit_selected(self):
