@@ -1,6 +1,29 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
+import tkinter.colorchooser as colorchooser
+import tkinter.simpledialog as simpledialog
 import xml.etree.ElementTree as ET
+
+
+
+class EditDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Edit Option")
+
+        color_button = tk.Button(self, text="Change Color", command=self.change_color)
+        color_button.pack(pady=5)
+
+        corner_button = tk.Button(self, text="Change Corner", command=self.change_corner)
+        corner_button.pack(pady=5)
+
+    def change_color(self):
+        self.destroy()
+        self.parent.change_color()
+
+    def change_corner(self):
+        self.destroy()
+        self.parent.change_corner()
 
 class DrawingEditor:
     def __init__(self, root):
@@ -47,6 +70,8 @@ class DrawingEditor:
         self.save_button = tk.Button(self.toolbar, text="Save", command=self.save)
         self.save_button.pack(side=tk.RIGHT)
 
+        self.edit_button = tk.Button(self.toolbar, text="Edit", command=self.edit_selected)
+        self.edit_button.pack(side=tk.RIGHT)
         # self.menu = tk.Menu(root)
         # self.menu.add_command(label="Save", command=self.save)
         # self.menu.add_command(label="Export", command=self.export)
@@ -243,7 +268,66 @@ class DrawingEditor:
         # if current_group:
         #     self.shapes.append(current_group)
         print(self.shapes)
-        
+    def edit_selected(self):
+        if not self.selected_items:
+            tk.messagebox.showwarning("Edit", "No shapes selected!")
+            return
+
+        edit_dialog = EditDialog(self.root)
+        edit_dialog.parent = self
+        edit_dialog.geometry("200x100")
+        edit_dialog.transient(self.root)
+        edit_dialog.grab_set()
+
+    def change_color(self):
+        # Dialog box for changing color
+        color = colorchooser.askcolor()  # Open a color picker dialog
+        if color:
+            color_hex = color[1]  # Get the hexadecimal color code
+            for group in self.selected_items:
+                for shape in group:
+                    item_id = shape[2]
+                    if self.canvas.type(item_id) == 'line':
+                        self.canvas.itemconfig(item_id, fill=color_hex, width=2)
+                    else:
+                        self.canvas.itemconfig(item_id, outline=color_hex, width=2)
+
+    def change_corner(self):
+        # Dialog box for changing corner style
+        corner_style = tk.simpledialog.askstring("Change Corner Style", "Enter 'rounded' or 'square' for corner style:")
+        if corner_style and corner_style.lower() in ['rounded', 'square']:
+            for group in self.selected_items:
+                for shape in group:
+                    props = shape[1]
+                    props['corner_style'] = corner_style.lower()
+                    # Update the corner style of the shape on the canvas
+                    item_id = shape[2]
+                    if self.canvas.type(item_id) == 'rectangle':
+                        # Redraw the rectangle with the updated corner style
+                        self.canvas.delete(item_id)  # Delete the old rectangle
+                        begin_x = props['begin_x']
+                        begin_y = props['begin_y']
+                        end_x = props['end_x']
+                        end_y = props['end_y']
+                        if corner_style.lower() == 'rounded':
+                            # Draw the rectangle with rounded corners
+                            radius = 10  # Adjust the radius as needed
+                            self.canvas.create_polygon(
+                                begin_x, begin_y + radius,
+                                begin_x, end_y - radius,
+                                begin_x + radius, end_y,
+                                end_x - radius, end_y,
+                                end_x, end_y - radius,
+                                end_x, begin_y + radius,
+                                end_x - radius, begin_y,
+                                begin_x + radius, begin_y,
+                                outline="black", fill="", tags="shape"
+                            )
+                        else:
+                            # Draw the rectangle with square corners
+                            self.canvas.create_rectangle(begin_x, begin_y, end_x, end_y, outline="black", tags="shape")
+
+
 
 
     def export(self):
@@ -281,6 +365,7 @@ class DrawingEditor:
                 messagebox.showinfo("Export", "Drawing exported to XML successfully!")
             except Exception as e:
                 messagebox.showerror("Export Error", str(e))
+    
 
 root = tk.Tk()
 app = DrawingEditor(root)
