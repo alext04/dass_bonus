@@ -7,8 +7,9 @@ import xml.etree.ElementTree as ET
 
 
 class EditDialog(tk.Toplevel):
-    def __init__(self, parent):
+    def __init__(self, parent, editor):
         super().__init__(parent)
+        self.editor = editor  # Store reference to the DrawingEditor
         self.title("Edit Option")
 
         color_button = tk.Button(self, text="Change Color", command=self.change_color)
@@ -19,11 +20,12 @@ class EditDialog(tk.Toplevel):
 
     def change_color(self):
         self.destroy()
-        self.parent.change_color()
+        self.editor.change_color()  # Call method on DrawingEditor
 
     def change_corner(self):
         self.destroy()
-        self.parent.change_corner()
+        self.editor.change_corner()  # Call method on DrawingEditor
+
 
 class DrawingEditor:
     def __init__(self, root):
@@ -101,18 +103,22 @@ class DrawingEditor:
 
     def draw(self, event):
         self.canvas.delete("temp_shape")
+        color = 'black'  # Default color
         if self.draw_mode == "rectangle":
-            self.canvas.create_rectangle(self.begin_x, self.begin_y, event.x, event.y, outline="black", tags="temp_shape")
+            color = self.selected_items[0][0][1]['color'] if self.selected_items and 'color' in self.selected_items[0][0][1] else 'black'
+            self.canvas.create_rectangle(self.begin_x, self.begin_y, event.x, event.y, outline=color, tags="temp_shape")
         elif self.draw_mode == "line":
-            self.canvas.create_line(self.begin_x, self.begin_y, event.x, event.y, fill="black", tags="temp_shape")
+            color = self.selected_items[0][0][1]['color'] if self.selected_items and 'color' in self.selected_items[0][0][1] else 'black'
+            self.canvas.create_line(self.begin_x, self.begin_y, event.x, event.y, fill=color, tags="temp_shape")
+
 
     def stop_drawing(self, event):
         self.canvas.delete("temp_shape")
-        shape_details = (
+        shape_details = [
             self.draw_mode,
-            {'begin_x': self.begin_x, 'begin_y': self.begin_y, 'end_x': event.x, 'end_y': event.y},
+            {'begin_x': self.begin_x, 'begin_y': self.begin_y, 'end_x': event.x, 'end_y': event.y, 'color': 'black'},
             self.canvas.create_line(self.begin_x, self.begin_y, event.x, event.y, fill="black") if self.draw_mode == "line" else self.canvas.create_rectangle(self.begin_x, self.begin_y, event.x, event.y, outline="black")
-        )
+        ]
         # Add new shape to a new group
         self.shapes.append([shape_details])
 
@@ -131,34 +137,39 @@ class DrawingEditor:
         self.select_shapes(selection_rect)
 
     def select_shapes(self, rect):
+        # Clear any existing selection highlights
         for group in self.shapes:
             for shape in group:
-                item_id = shape[2]  # Extract the item ID from the shape details
-                if self.canvas.type(item_id) == 'line':
-                    self.canvas.itemconfig(item_id, fill="black", width=1)
-                else:
-                    self.canvas.itemconfig(item_id, outline="black", width=1)
+                item_id = shape[2]
+                item_type = self.canvas.type(item_id)
+                # Reset outlines to default for all items
+                # self.canvas.itemconfig(item_id, outline=shape[1].get('color', 'black'), width=1)
+
+        # Clear selected items list
         self.selected_items.clear()
 
+        # Find and configure selected items
         selected_items = self.canvas.find_overlapping(rect[0], rect[1], rect[2], rect[3])
         for group in self.shapes:
             for shape in group:
-                if shape[2] in selected_items:
-                    item_id = shape[2]
-                    if self.canvas.type(item_id) == 'line':
-                        self.canvas.itemconfig(item_id, fill="red", width=2)
+                item_id = shape[2]
+                item_type = self.canvas.type(item_id)
+                if item_id in selected_items:
+                    # Highlight outline in red and increase width to 2
+
+                    if item_type == 'line':
+                        self.canvas.itemconfig(item_id, fill='red')
                     else:
-                        self.canvas.itemconfig(item_id, outline="red", width=2)
+                        self.canvas.itemconfig(item_id, outline='red', width=2)
+                            
                     if group not in self.selected_items:
                         self.selected_items.append(group)
-                        # Color all objects within the group when selected
-                        for shape_in_group in group:
-                            item_id_in_group = shape_in_group[2]
-                            if self.canvas.type(item_id_in_group) == 'line':
-                                self.canvas.itemconfig(item_id_in_group, fill="red", width=2)
-                            else:
-                                self.canvas.itemconfig(item_id_in_group, outline="red", width=2)
-                    break
+
+    def polygon_overlaps(self, polygon_id, selection_rect):
+        bbox = self.canvas.bbox(polygon_id)  # Get bounding box of the polygon
+        return not (bbox[2] < selection_rect[0] or bbox[0] > selection_rect[2] or
+                    bbox[3] < selection_rect[1] or bbox[1] > selection_rect[3])
+
 
     def start_move(self, event):
         self.begin_x = event.x
@@ -173,10 +184,12 @@ class DrawingEditor:
         for group in self.selected_items:
             for shape in group:
                 item_id = shape[2]
+                color=shape[1]['color']
+                print(shape)
                 if self.canvas.type(item_id) == 'line':
-                    self.canvas.itemconfig(item_id, fill="black", width=1)
+                    self.canvas.itemconfig(item_id, fill=color, width=1)
                 else:
-                    self.canvas.itemconfig(item_id, outline="black", width=1)
+                    self.canvas.itemconfig(item_id, outline=color, width=1)
 
         # Clear the list of selected items
         self.selected_items.clear()
@@ -273,61 +286,63 @@ class DrawingEditor:
             tk.messagebox.showwarning("Edit", "No shapes selected!")
             return
 
-        edit_dialog = EditDialog(self.root)
-        edit_dialog.parent = self
+        edit_dialog = EditDialog(self.root, self)  # Pass self as editor to EditDialog
         edit_dialog.geometry("200x100")
         edit_dialog.transient(self.root)
         edit_dialog.grab_set()
 
+
+        # edit_dialog = EditDialog(self.root)
+        # edit_dialog.parent = self
+        # edit_dialog.geometry("200x100")
+        # edit_dialog.transient(self.root)
+        # edit_dialog.grab_set()
+
     def change_color(self):
-        # Dialog box for changing color
-        color = colorchooser.askcolor()  # Open a color picker dialog
+        if not self.selected_items:
+            tk.messagebox.showwarning("Change Color", "No shape selected to change color!")
+            return
+        color = colorchooser.askcolor(title="Choose color")[1]
         if color:
-            color_hex = color[1]  # Get the hexadecimal color code
             for group in self.selected_items:
                 for shape in group:
                     item_id = shape[2]
-                    if self.canvas.type(item_id) == 'line':
-                        self.canvas.itemconfig(item_id, fill=color_hex, width=2)
+                    shape_type = self.canvas.type(item_id)
+                    shape[1]['color'] = color  # Update color in shape's data
+                    if shape_type == 'line':
+                        self.canvas.itemconfig(item_id, fill=color)
                     else:
-                        self.canvas.itemconfig(item_id, outline=color_hex, width=2)
+                        self.canvas.itemconfig(item_id, outline=color)
 
     def change_corner(self):
-        # Dialog box for changing corner style
-        corner_style = tk.simpledialog.askstring("Change Corner Style", "Enter 'rounded' or 'square' for corner style:")
+        if not self.selected_items:
+            tk.messagebox.showwarning("Change Corner", "No shape selected to change corners!")
+            return
+        corner_style = simpledialog.askstring("Change Corner Style", "Enter 'rounded' or 'square':")
         if corner_style and corner_style.lower() in ['rounded', 'square']:
             for group in self.selected_items:
                 for shape in group:
-                    props = shape[1]
-                    props['corner_style'] = corner_style.lower()
-                    # Update the corner style of the shape on the canvas
-                    item_id = shape[2]
-                    if self.canvas.type(item_id) == 'rectangle':
-                        # Redraw the rectangle with the updated corner style
-                        self.canvas.delete(item_id)  # Delete the old rectangle
-                        begin_x = props['begin_x']
-                        begin_y = props['begin_y']
-                        end_x = props['end_x']
-                        end_y = props['end_y']
-                        if corner_style.lower() == 'rounded':
-                            # Draw the rectangle with rounded corners
-                            radius = 10  # Adjust the radius as needed
-                            self.canvas.create_polygon(
-                                begin_x, begin_y + radius,
-                                begin_x, end_y - radius,
-                                begin_x + radius, end_y,
-                                end_x - radius, end_y,
-                                end_x, end_y - radius,
-                                end_x, begin_y + radius,
-                                end_x - radius, begin_y,
-                                begin_x + radius, begin_y,
-                                outline="black", fill="", tags="shape"
-                            )
-                        else:
-                            # Draw the rectangle with square corners
-                            self.canvas.create_rectangle(begin_x, begin_y, end_x, end_y, outline="black", tags="shape")
+                    if(shape[0] == 'rectangle'):
+                        self.update_shape_corners(shape, corner_style.lower())
+
+    def update_shape_corners(self, shape, corner_style):
+        item_id, props = shape[2], shape[1]
+        self.canvas.delete(item_id)
+        if corner_style == 'rounded':
+            new_id = self.create_rounded_rectangle(props['begin_x'], props['begin_y'], props['end_x'], props['end_y'], props.get('color', 'black'))
+        else:
+            new_id = self.canvas.create_rectangle(props['begin_x'], props['begin_y'], props['end_x'], props['end_y'], outline=props.get('color', 'black'))
+        print(shape)
+        shape[2] = new_id  # Update shape id in the data structure
 
 
+    def create_rounded_rectangle(self, x1, y1, x2, y2, outline='black', radius=25):
+        """Create a rectangle with rounded corners"""
+        points = [x1+radius, y1, x1+radius, y1, x2-radius, y1, x2-radius, y1, x2, y1, 
+                x2, y1+radius, x2, y2-radius, x2, y2-radius, x2, y2,
+                x2-radius, y2, x1+radius, y2, x1+radius, y2, x1, y2, 
+                x1, y2-radius, x1, y1+radius, x1, y1+radius, x1, y1]
+        return self.canvas.create_polygon(points, smooth=True, outline=outline, fill='', width=2)
 
 
     def export(self):
