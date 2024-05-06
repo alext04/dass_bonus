@@ -143,12 +143,15 @@ class DrawingEditor:
 
     def select_shapes(self, rect):
         # Clear any existing selection highlights
-        for group in self.shapes:
-            for shape in group:
-                item_id = shape[2]
-                item_type = self.canvas.type(item_id)
-                # Reset outlines to default for all items
-                # self.canvas.itemconfig(item_id, outline=shape[1].get('color', 'black'), width=1)
+        for group in self.selected_items:
+                for shape in group:
+                    item_id = shape[2]
+                    color = shape[1].get('color', 'black')
+                    if self.canvas.type(item_id) == 'line':
+                        self.canvas.itemconfig(item_id, fill=color, width=1)
+                    else:
+                        self.canvas.itemconfig(item_id, outline=color, width=1)
+
 
         # Clear selected items list
         self.selected_items.clear()
