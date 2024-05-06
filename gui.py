@@ -4,7 +4,12 @@ import tkinter.colorchooser as colorchooser
 import tkinter.simpledialog as simpledialog
 import xml.etree.ElementTree as ET
 
-
+def is_group(group):
+    try:    
+        if group[0][0] == 'line'or group[0][0] == 'rectangle':
+            return True
+    except:
+        return False
 
 class EditDialog(tk.Toplevel):
     def __init__(self, parent, editor):
@@ -150,20 +155,29 @@ class DrawingEditor:
 
         # Find and configure selected items
         selected_items = self.canvas.find_overlapping(rect[0], rect[1], rect[2], rect[3])
+        print(selected_items)
+        groups = []
+        print(self.shapes)
         for group in self.shapes:
+            
             for shape in group:
                 item_id = shape[2]
                 item_type = self.canvas.type(item_id)
                 if item_id in selected_items:
+                    groups.append(group)
+                    
                     # Highlight outline in red and increase width to 2
 
                     if item_type == 'line':
                         self.canvas.itemconfig(item_id, fill='red')
                     else:
                         self.canvas.itemconfig(item_id, outline='red', width=2)
-                            
-                    if group not in self.selected_items:
-                        self.selected_items.append(group)
+                        
+                    break  
+
+        self.selected_items.clear()
+        self.selected_items = groups
+        # print (self.selected_items)
 
     def polygon_overlaps(self, polygon_id, selection_rect):
         bbox = self.canvas.bbox(polygon_id)  # Get bounding box of the polygon
@@ -185,7 +199,7 @@ class DrawingEditor:
             for shape in group:
                 item_id = shape[2]
                 color=shape[1]['color']
-                print(shape)
+                
                 if self.canvas.type(item_id) == 'line':
                     self.canvas.itemconfig(item_id, fill=color, width=1)
                 else:
@@ -213,9 +227,15 @@ class DrawingEditor:
     def group_selected(self):
         if len(self.selected_items) > 1:
             new_group = []
-            for group in self.selected_items:
-                for shape in group:
-                    new_group.append(shape)
+            for item in self.selected_items:
+                if is_group(item):
+                    for shape in item:
+                        new_group.append(shape)
+                    self.shapes.remove(item)
+                else:
+                    new_group.append(item)
+                    self.shapes.remove(item)
+                    
             self.shapes.append(new_group)
             self.selected_items.clear()
         else:
@@ -332,7 +352,7 @@ class DrawingEditor:
             new_id = self.create_rounded_rectangle(props['begin_x'], props['begin_y'], props['end_x'], props['end_y'], props.get('color', 'black'))
         else:
             new_id = self.canvas.create_rectangle(props['begin_x'], props['begin_y'], props['end_x'], props['end_y'], outline=props.get('color', 'black'))
-        print(shape)
+        # print(shape)
         shape[2] = new_id  # Update shape id in the data structure
 
 
