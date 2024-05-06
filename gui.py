@@ -10,7 +10,16 @@ def is_group(group):
             return True
     except:
         return False
-
+def color_data(shape_data):
+        if shape_data == 'r':
+            return "red"
+        if shape_data == 'g':
+            return "green"
+        if shape_data == 'b':
+            return 'blue'
+        if shape_data == 'k':
+            return 'black'
+        
 class EditDialog(tk.Toplevel):
     def __init__(self, parent, editor):
         super().__init__(parent)
@@ -167,7 +176,6 @@ class DrawingEditor:
                     groups.append(group)
                     
                     # Highlight outline in red and increase width to 2
-
                     if item_type == 'line':
                         self.canvas.itemconfig(item_id, fill='red')
                     else:
@@ -212,6 +220,7 @@ class DrawingEditor:
         dx = event.x - self.begin_x
         dy = event.y - self.begin_y
         for group in self.selected_items:
+            print(group)
             for shape in group:
                 self.canvas.move(shape[2], dx, dy)
         self.begin_x = event.x
@@ -276,8 +285,10 @@ class DrawingEditor:
             with open(filename, "r") as file:
                 self.load_drawing(file)
 
+    
+        
     def load_drawing(self, file):
-        print("Yes")
+        # print("Yes")
         # self.clear()  # Clear existing drawing
         current_group = []  # List to hold shapes in the current group
         for line in file:
@@ -294,13 +305,22 @@ class DrawingEditor:
                     'begin_x': int(shape_data[1]),
                     'begin_y': int(shape_data[2]),
                     'end_x': int(shape_data[3]),
-                    'end_y': int(shape_data[4])
+                    'end_y': int(shape_data[4]),
+                    'color': color_data(shape_data[5]),
                 }
+                if(shape_type == 'rect'):
+                    shape_properties['style']=shape_data[6]
+                
                 current_group.append((shape_type, shape_properties))
+            
         # Add the last group if it exists
-        # if current_group:
-        #     self.shapes.append(current_group)
+        if current_group:
+            self.shapes.append(current_group)
+
         print(self.shapes)
+    
+   
+    
     def edit_selected(self):
         if not self.selected_items:
             tk.messagebox.showwarning("Edit", "No shapes selected!")
