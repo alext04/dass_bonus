@@ -41,8 +41,8 @@ class DrawingEditor:
         self.export_button = tk.Button(self.toolbar, text="Export", command=self.export)
         self.export_button.pack(side=tk.RIGHT)
         
-        # self.open_button = tk.Button(self.toolbar, text="Open", command=self.open)
-        # self.open_button.pack(side=tk.RIGHT)
+        self.open_button = tk.Button(self.toolbar, text="Open", command=self.open)
+        self.open_button.pack(side=tk.RIGHT)
         
         self.save_button = tk.Button(self.toolbar, text="Save", command=self.save)
         self.save_button.pack(side=tk.RIGHT)
@@ -210,6 +210,41 @@ class DrawingEditor:
                     if len(group) > 1:
                         file.write("end\n")
                 messagebox.showinfo("Save", "Drawing saved successfully!")
+
+    def open(self, filename=None):
+        if not filename:
+            filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+        if filename:
+            with open(filename, "r") as file:
+                self.load_drawing(file)
+
+    def load_drawing(self, file):
+        print("Yes")
+        # self.clear()  # Clear existing drawing
+        current_group = []  # List to hold shapes in the current group
+        for line in file:
+            line = line.strip()
+            if line == "start":
+                current_group = []  # Start a new group
+            elif line == "end":
+                self.shapes.append(current_group)  # Add the current group to the list of shapes
+                current_group = []  # Clear the current group
+            else:
+                shape_data = line.split()
+                shape_type = shape_data[0]
+                shape_properties = {
+                    'begin_x': int(shape_data[1]),
+                    'begin_y': int(shape_data[2]),
+                    'end_x': int(shape_data[3]),
+                    'end_y': int(shape_data[4])
+                }
+                current_group.append((shape_type, shape_properties))
+        # Add the last group if it exists
+        # if current_group:
+        #     self.shapes.append(current_group)
+        print(self.shapes)
+        
+
 
     def export(self):
         root = ET.Element("Shapes")
